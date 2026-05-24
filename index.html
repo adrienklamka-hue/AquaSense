@@ -864,18 +864,55 @@ Valeurs numeriques ou null. temp en C, ph sans unite, chlore/tac/stabilisant/th 
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-5',
-          max_tokens: 500,
-          system: sys,
-          messages: [{ role: 'user', content: msgContent }]
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          messages: [{
+            role: 'user',
+            content: (function() {
+              var prompt = 'Reponds uniquement avec un JSON valide (pas de markdown, pas de texte autour), exemple: {"temp":null,"ph":7.2,"chlore":1.5,"tac":90,"stabilisant":35,"th":200,"notes":"ok"}\n\nDonnees piscine ' + state.settings.volume + 'm3 : ';
+              if (state.aiMode === 'image' && state.aiB64) {
+                return [
+                  { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: state.aiB64 } },
+                  { type: 'text', text: prompt + 'Photo de bandelette ci-dessus. Extrait les valeurs en mg/L.' }
+                ];
+              }
+              return prompt + inputText;
+            })()
+          }]
         })
       });
 
-      var data = await resp.json();
-      if (data.error) throw new Error(data.error.message || 'Erreur API');
-      var rawText = (data.content || []).map(function(b) { return b.text || ''; }).join('').trim();
-      rawText = rawText.replace(/```json|```/g, '').trim();
-      r = JSON.parse(rawText);
+      // Read as text first to debug if needed
+      var rawResp = await resp.text();
+
+      // Parse HTTP response
+      var data;
+      try { data = JSON.parse(rawResp); } catch(e) {
+        throw new Error('Réponse API illisible: ' + rawResp.slice(0, 100));
+      }
+
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      if (!data.content || !data.content.length) throw new Error('Réponse vide du modèle');
+
+      // Extract text from content blocks
+      var rawText = data.content
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text || ''; })
+        .join('').trim();
+
+      // Strip markdown fences if present
+      rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+      // Extract JSON object from text (in case there's surrounding text)
+      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Pas de JSON dans la réponse: ' + rawText.slice(0, 100));
+
+      r = JSON.parse(jsonMatch[0]);
+
+      // Ensure all keys exist
+      ['temp','ph','chlore','tac','stabilisant','th','notes'].forEach(function(k) {
+        if (!(k in r)) r[k] = null;
+      });
     }
 
     // ── Afficher les résultats ───────────────────────────────────────────────
