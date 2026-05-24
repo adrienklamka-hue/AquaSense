@@ -1,0 +1,19 @@
+{
+  "name": "AquaSense Pro",
+  "short_name": "AquaSense",
+  "description": "Gestion intelligente de ma piscine",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1628",
+  "theme_color": "#0A1628",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%230A1628'/%3E%3Cpath d='M60 300 Q190 240 256 300 Q322 360 452 300 L452 380 Q322 440 256 380 Q190 320 60 380 Z' fill='%230ea5e9'/%3E%3Cpath d='M60 350 Q190 290 256 350 Q322 410 452 350 L452 450 L60 450 Z' fill='%2306b6d4'/%3E%3Ccircle cx='256' cy='180' r='70' fill='none' stroke='%2300e5cc' stroke-width='18'/%3E%3Cline x1='256' y1='130' x2='256' y2='200' stroke='%2300e5cc' stroke-width='14' stroke-linecap='round'/%3E%3Ccircle cx='256' cy='200' r='22' fill='%2300e5cc'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

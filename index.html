@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AquaSense Pro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A1628">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AquaSense">
+<link rel="apple-touch-icon" id="ati">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:linear-gradient(150deg,#0a1628 0%,#0d2144 60%,#071625 100%);
+  color:#e2e8f0;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  min-height:100vh;
+  padding:16px 14px 90px;
+  padding-top:max(16px, env(safe-area-inset-top));
+  padding-bottom:max(90px, calc(env(safe-area-inset-bottom) + 70px));
+}
+.glow{position:fixed;top:0;left:0;right:0;height:40vh;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(14,165,233,0.1),transparent);pointer-events:none;z-index:0;}
+#app{position:relative;z-index:1;max-width:640px;margin:0 auto;}
+h1{font-size:24px;font-weight:700;margin-top:2px;}
+h1 span{color:#0ea5e9;}
+.lbl{font-size:10px;letter-spacing:.18em;color:#0ea5e9;text-transform:uppercase;}
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.hdr-r{display:flex;gap:8px;align-items:center;}
+.badge{padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;}
+.btn-icon{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 12px;color:#94a3b8;font-size:18px;cursor:pointer;}
+/* Tabs */
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.04);padding:4px;border-radius:14px;border:1px solid rgba(255,255,255,.06);margin-bottom:18px;}
+.tab{flex:1;padding:9px 4px;border-radius:10px;border:none;font-size:11px;font-weight:600;background:transparent;color:#64748b;cursor:pointer;letter-spacing:.01em;transition:all .2s;}
+.tab.active{background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;}
+/* Cards */
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:18px;margin-bottom:14px;}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.12em;color:#0ea5e9;text-transform:uppercase;margin-bottom:14px;}
+/* Gauges grid */
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.gauge{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px 16px;position:relative;overflow:hidden;}
+.gauge-label{font-size:10px;letter-spacing:.1em;color:#94a3b8;text-transform:uppercase;}
+.gauge-val{font-size:26px;font-weight:700;line-height:1.2;margin-top:2px;}
+.gauge-unit{font-size:12px;font-weight:400;color:#64748b;margin-left:3px;}
+.gauge-status{padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;}
+.gauge-bar-wrap{height:5px;background:rgba(255,255,255,.06);border-radius:99px;position:relative;margin-top:10px;}
+.gauge-ideal{position:absolute;top:0;height:100%;background:rgba(16,185,129,.3);border-radius:99px;}
+.gauge-dot{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;border:2px solid #0A1628;transform:translate(-50%,-50%);}
+.gauge-minmax{display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:#475569;}
+.gauge-ideal-lbl{color:#10b981;font-size:8px;}
+/* Recs */
+.rec{border-left:3px solid;border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.rec-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.rec-title{font-weight:600;font-size:13px;}
+.rec-dose{padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;margin-left:8px;white-space:nowrap;}
+.rec-action{font-size:12px;color:#94a3b8;margin-bottom:3px;}
+.rec-tip{font-size:11px;color:#64748b;font-style:italic;}
+.rec-brand{font-size:10px;color:#0ea5e9;margin-top:5px;}
+/* Settings */
+#settings-panel{display:none;}
+#settings-panel.open{display:block;}
+.settings-grid{display:grid;gap:12px;}
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group label{font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;letter-spacing:.06em;}
+.form-group{position:relative;}
+.dot-ind{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;}
+input,select,textarea{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;padding:12px 14px;color:#e2e8f0;font-size:16px;width:100%;outline:none;
+  -webkit-appearance:none;font-family:inherit;
+}
+input:focus,select:focus,textarea:focus{border-color:rgba(14,165,233,.6);}
+select option{background:#0d2144;}
+textarea{resize:vertical;min-height:100px;}
+/* Buttons */
+.btn{background:linear-gradient(135deg,#0ea5e9,#06b6d4);color:#fff;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.03em;font-family:inherit;}
+.btn-ghost{background:rgba(255,255,255,.06);color:#94a3b8;border:none;border-radius:10px;padding:12px 22px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-danger{background:rgba(239,68,68,.08);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 18px;font-size:12px;cursor:pointer;font-family:inherit;}
+.btn-sm{padding:7px 14px;font-size:11px;}
+/* Ideal zone table */
+.ideal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px;}
+.ideal-cell{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:8px;padding:7px 9px;font-size:10px;}
+.ideal-cell .n{color:#10b981;font-weight:600;}
+.ideal-cell .v{color:#94a3b8;margin-top:2px;}
+/* History */
+.hist-entry{border-left:3px solid;border-radius:16px;padding:14px;margin-bottom:10px;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.06);border-right:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);}
+.hist-vals{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;font-size:11px;}
+/* AI */
+.ai-modes{display:flex;gap:8px;margin-bottom:16px;}
+.ai-mode-btn{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.drop-zone{border:2px dashed rgba(14,165,233,.3);border-radius:14px;padding:28px;text-align:center;cursor:pointer;background:rgba(14,165,233,.04);}
+.drop-zone img{max-height:180px;max-width:100%;border-radius:8px;}
+.ai-result{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:14px;padding:16px;margin-top:16px;}
+.ai-vals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.ai-val-cell{background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;}
+.ai-val-cell .ak{font-size:10px;color:#94a3b8;}
+.ai-val-cell .av{font-size:18px;font-weight:700;}
+.warn-box{padding:12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;font-size:12px;color:#fcd34d;margin-bottom:16px;}
+.err-box{padding:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;color:#fca5a5;font-size:12px;margin-top:14px;}
+.tip-box{padding:10px 12px;background:rgba(6,182,212,.08);border-radius:10px;border:1px solid rgba(6,182,212,.2);font-size:11px;color:#67e8f9;margin-top:14px;}
+.save-msg{color:#10b981;font-size:13px;}
+.footer{margin-top:28px;text-align:center;font-size:10px;color:#1e3a5f;}
+.hidden{display:none;}
+.flex-gap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;}
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div id="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div>
+      <div class="lbl">AquaSense Pro</div>
+      <h1>Ma Piscine <span id="vol-display">75m³</span></h1>
+    </div>
+    <div class="hdr-r">
+      <div id="global-badge" class="badge"></div>
+      <button class="btn-icon" onclick="toggleSettings()">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel" class="card" style="border-color:rgba(14,165,233,.3);margin-bottom:16px;">
+    <div class="card-title">Paramètres</div>
+    <div class="settings-grid">
+      <div>
+        <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;">Volume piscine (m³)</label>
+        <input type="number" id="s-volume" value="75" oninput="saveSettings()">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;">Traitement principal</label>
+        <select id="s-treatment" onchange="saveSettings()">
+          <option value="hypochlorite">Hypochlorite calcium (sans stabilisant) ⭐</option>
+          <option value="stabilise">Chlore stabilisé (galets trichlore)</option>
+          <option value="sel">Électrolyse au sel</option>
+          <option value="brome">Brome</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:5px;">🔑 Clé API Anthropic (analyse IA)</label>
+        <input type="password" id="s-apikey" placeholder="sk-ant-api03-..." oninput="saveSettings()">
+        <div style="font-size:10px;color:#475569;margin-top:4px;">console.anthropic.com → API Keys · Stockée localement</div>
+      </div>
+    </div>
+    <div class="tip-box" style="margin-top:12px;">💡 Hauts-de-France : eau calcaire (TH élevé). Anticalcaire hebdomadaire recommandé.</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard',this)">🌊 Dashboard</button>
+    <button class="tab" onclick="switchTab('saisie',this)">📝 Saisie</button>
+    <button class="tab" onclick="switchTab('ia',this)">🤖 IA</button>
+    <button class="tab" onclick="switchTab('historique',this)">📊 Historique</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard">
+    <div id="last-date" style="font-size:11px;color:#475569;text-align:right;margin-bottom:12px;"></div>
+    <div class="gauges" id="gauges-grid"></div>
+    <div class="card" id="recs-card">
+      <div class="card-title">🔬 Recommandations</div>
+      <div id="recs-list"></div>
+      <div class="tip-box" id="chlore-tip">
+        💡 <strong>Conseil clé :</strong> Maintien = <strong>Hypochlorite de calcium PCH 70%</strong> (0% acide cyanurique). Galets trichlore réservés aux absences longues uniquement.
+      </div>
+    </div>
+  </div>
+
+  <!-- SAISIE -->
+  <div id="tab-saisie" class="hidden">
+    <div class="card">
+      <div class="card-title">📝 Saisie des mesures</div>
+      <div class="form-grid" id="form-grid"></div>
+      <div class="flex-gap">
+        <button class="btn" onclick="saveMeasurement()">💾 Enregistrer</button>
+        <button class="btn-ghost" onclick="clearForm()">🔄 Réinitialiser</button>
+        <span class="save-msg" id="save-msg"></span>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:14px;margin-top:18px;">
+        <div style="font-size:10px;color:#0ea5e9;font-weight:700;margin-bottom:10px;letter-spacing:.1em;">ZONES IDÉALES</div>
+        <div class="ideal-grid" id="ideal-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IA -->
+  <div id="tab-ia" class="hidden">
+    <div class="card">
+      <div class="card-title">🤖 Analyse IA</div>
+      <p style="font-size:12px;color:#64748b;margin-bottom:16px;">Décris l'état de ta piscine ou charge une photo de bandelette.</p>
+      <div id="no-key-warn" class="warn-box hidden">⚠️ Clé API manquante — renseigne-la dans ⚙️ Paramètres.</div>
+      <div class="ai-modes">
+        <button class="ai-mode-btn" id="mode-text-btn" onclick="setAiMode('text')" style="background:rgba(14,165,233,.15);color:#0ea5e9;border:1px solid rgba(14,165,233,.4);">📝 Texte</button>
+        <button class="ai-mode-btn" id="mode-img-btn" onclick="setAiMode('image')" style="background:rgba(255,255,255,.04);color:#64748b;border:1px solid rgba(255,255,255,.08);">📷 Photo bandelette</button>
+      </div>
+      <div id="ai-text-zone">
+        <textarea id="ai-text" placeholder="Exemples :&#10;• pH 7.6, chlore 0.5, TAC 70, eau légèrement verte&#10;• Bandelette : free chlorine 1, pH 7.2, alkalinity 90, CYA 30, hardness 180&#10;• Eau trouble, pH jaune clair, chlore rose pâle"></textarea>
+      </div>
+      <div id="ai-img-zone" class="hidden">
+        <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+          <img id="preview-img" style="display:none;">
+          <div id="drop-placeholder"><div style="font-size:28px;margin-bottom:6px;">📷</div><div style="font-size:12px;color:#94a3b8;">Clique pour charger une photo</div></div>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleImg(event)">
+      </div>
+      <button class="btn" style="margin-top:14px;" onclick="runAI()" id="ai-btn">🔍 Analyser</button>
+      <div id="ai-result-box"></div>
+    </div>
+  </div>
+
+  <!-- HISTORIQUE -->
+  <div id="tab-historique" class="hidden">
+    <div id="hist-list"></div>
+  </div>
+
+  <div class="footer">AquaSense Pro · Les dosages sont indicatifs — toujours vérifier après traitement.</div>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const PARAMS = {
+  temp:        {label:'Température',  unit:'°C',   min:24,  max:28,  wL:18,  wH:35,  icon:'🌡️'},
+  ph:          {label:'pH',           unit:'',     min:7.2, max:7.4, wL:6.8, wH:7.8, icon:'⚗️'},
+  chlore:      {label:'Chlore libre', unit:'mg/L', min:1.0, max:2.0, wL:0.5, wH:3.5, icon:'🧪'},
+  tac:         {label:'Alcalinité',   unit:'mg/L', min:80,  max:120, wL:50,  wH:200, icon:'🧲'},
+  stabilisant: {label:'Stabilisant',  unit:'mg/L', min:25,  max:50,  wL:10,  wH:100, icon:'☀️'},
+  th:          {label:'Dureté TH',    unit:'mg/L', min:100, max:250, wL:75,  wH:400, icon:'💎'},
+};
+const KEYS = Object.keys(PARAMS);
+const S_COLOR = {ok:'#10b981',warn:'#f59e0b',bad:'#ef4444',unknown:'#64748b'};
+const S_LABEL = {ok:'Optimal',warn:'Attention',bad:'Hors zone',unknown:'—'};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let state = {
+  vals: {temp:'',ph:'',chlore:'',tac:'',stabilisant:'',th:''},
+  history: [],
+  settings: {volume:75, treatment:'hypochlorite', apiKey:''},
+  aiMode: 'text',
+  aiB64: null,
+};
+
+// ── Persist ──────────────────────────────────────────────────────────────────
+function loadState() {
+  try { const v = localStorage.getItem('aq_vals'); if(v) state.vals = JSON.parse(v); } catch{}
+  try { const h = localStorage.getItem('aq_hist'); if(h) state.history = JSON.parse(h); } catch{}
+  try { const s = localStorage.getItem('aq_set'); if(s) { const p = JSON.parse(s); state.settings = {...state.settings,...p}; } } catch{}
+  document.getElementById('s-volume').value = state.settings.volume;
+  document.getElementById('s-treatment').value = state.settings.treatment;
+  document.getElementById('s-apikey').value = state.settings.apiKey || '';
+}
+
+function saveSettings() {
+  state.settings.volume = parseFloat(document.getElementById('s-volume').value) || 75;
+  state.settings.treatment = document.getElementById('s-treatment').value;
+  state.settings.apiKey = document.getElementById('s-apikey').value.trim();
+  localStorage.setItem('aq_set', JSON.stringify(state.settings));
+  document.getElementById('vol-display').textContent = state.settings.volume + 'm³';
+  renderDashboard();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getStatus(key, value) {
+  if (value === '' || value === undefined || value === null) return 'unknown';
+  const v = parseFloat(value), p = PARAMS[key];
+  if (isNaN(v)) return 'unknown';
+  if (v >= p.min && v <= p.max) return 'ok';
+  if (v >= p.wL && v <= p.wH) return 'warn';
+  return 'bad';
+}
+
+function fmtVal(key, value) {
+  if (value === '' || value === undefined) return '—';
+  const v = parseFloat(value);
+  if (isNaN(v)) return '—';
+  return key === 'ph' ? v.toFixed(1) : Math.round(v).toString();
+}
+
+// ── Recommendations ──────────────────────────────────────────────────────────
+function calcRecs(vals, vol) {
+  const V = parseFloat(vol) || 75;
+  const recs = [];
+
+  const ph = parseFloat(vals.ph);
+  if (!isNaN(ph)) {
+    if (ph < 7.2) {
+      const d = Math.round(((7.3-ph)/0.1)*V*15);
+      recs.push({p:ph<6.8?'urgent':'normal',icon:'🔼',color:'#f59e0b',
+        title:'pH+ (carbonate de soude)',action:`↑ pH ${ph.toFixed(1)} → 7.3`,
+        dose:d>=1000?`${(d/1000).toFixed(2)} kg`:`${d} g`,
+        tip:'Diluer dans un seau. Verser devant les buses, pompe en marche. Filtrer 4h avant contrôle.',
+        brand:'🛒 BAYROL pH Plus granulés ou Mareva pH+'});
+    } else if (ph > 7.6) {
+      const d = Math.round(((ph-7.3)/0.1)*V*15);
+      recs.push({p:ph>7.8?'urgent':'normal',icon:'🔽',color:'#f59e0b',
+        title:'pH- (bisulfate de soude)',action:`↓ pH ${ph.toFixed(1)} → 7.3`,
+        dose:d>=1000?`${(d/1000).toFixed(2)} kg`:`${d} g`,
+        tip:'Ne jamais mélanger. Verser en plusieurs points. Préférer granulés au liquide.',
+        brand:'🛒 BAYROL pH Minus granulés'});
+    }
+  }
+
+  const cl = parseFloat(vals.chlore);
+  if (!isNaN(cl)) {
+    if (cl < 1.0) {
+      const d = Math.round((1.5-cl)*V*14);
+      recs.push({p:cl<0.5?'urgent':'normal',icon:'💧',color:cl<0.5?'#ef4444':'#3b82f6',
+        title:'Hypochlorite calcium 70% — SANS stabilisant',action:`↑ Chlore ${cl.toFixed(1)} → 1.5 mg/L`,
+        dose:d>=1000?`${(d/1000).toFixed(2)} kg`:`${d} g`,
+        tip:'⚠️ Pré-diluer dans un seau. Ne monte pas le stabilisant. Idéal en usage régulier.',
+        brand:`🛒 BAYROL Chloryte / HTH Choc / OCEDIS PCH — seau 5-10 kg (meilleur prix/kg)`});
+    } else if (cl > 3.5) {
+      recs.push({p:'normal',icon:'⏳',color:'#f59e0b',
+        title:'Chlore trop élevé — arrêt traitement',action:`↓ Laisser baisser (${cl.toFixed(1)} mg/L)`,
+        dose:'Soleil + filtration continue',
+        tip:'Ne pas baigner si > 3 mg/L. Les UV feront baisser naturellement.',brand:''});
+    }
+  }
+
+  const tac = parseFloat(vals.tac);
+  if (!isNaN(tac)) {
+    if (tac < 80) {
+      const d = Math.round(((100-tac)/10)*V*10);
+      recs.push({p:tac<50?'urgent':'normal',icon:'🔼',color:'#8b5cf6',
+        title:'Bicarbonate de soude (TAC+)',action:`↑ Alcalinité ${tac} → 100 mg/L`,
+        dose:d>=1000?`${(d/1000).toFixed(1)} kg`:`${d} g`,
+        tip:'Traiter le TAC EN PREMIER — tampon qui stabilise le pH. Verser en plusieurs fois sur 48h.',
+        brand:'🛒 Bicarbonate alimentaire E500 (supermarché) = identique piscine, 5× moins cher'});
+    } else if (tac > 150) {
+      recs.push({p:'normal',icon:'🔽',color:'#8b5cf6',
+        title:'Alcalinité trop élevée',action:`↓ TAC ${tac} → 120 mg/L`,
+        dose:`Vidange ~${Math.round(((tac-120)/tac)*V*1000)} L + eau fraîche`,
+        tip:'Vidange partielle. Le pH- peut aussi abaisser le TAC prudemment.',brand:''});
+    }
+  }
+
+  const stab = parseFloat(vals.stabilisant);
+  if (!isNaN(stab)) {
+    if (stab > 75) {
+      const vidange = Math.round(((stab-50)/stab)*V*1000);
+      recs.push({p:stab>100?'urgent':'normal',icon:'🚨',color:'#ef4444',
+        title:'⚠️ Sur-stabilisation — ACTION REQUISE',action:`↓ Stabilisant ${stab} → 50 mg/L`,
+        dose:`Vidange ${(vidange/1000).toFixed(1)} m³ + eau fraîche`,
+        tip:'SEULE solution : dilution par vidange. Le stabilisant ne s\'élimine pas chimiquement. Passer définitivement à l\'hypochlorite calcium.',
+        brand:'🚫 Arrêt immédiat de tout chlore stabilisé (galets trichlore)'});
+    } else if (stab < 20) {
+      const d = Math.round(((30-stab)/10)*V*8);
+      recs.push({p:'normal',icon:'🔼',color:'#06b6d4',
+        title:'Stabilisant (acide cyanurique)',action:`↑ Stabilisant ${stab} → 30 mg/L`,
+        dose:d>=1000?`${(d/1000).toFixed(1)} kg`:`${d} g`,
+        tip:'Monte très lentement. Verser dans le skimmer en plusieurs fois. Ne pas dépasser 50 mg/L.',
+        brand:'🛒 Stabilisant granulé Mareva ou BAYROL — doser avec parcimonie'});
+    }
+  }
+
+  const th = parseFloat(vals.th);
+  if (!isNaN(th)) {
+    if (th < 100) {
+      const d = Math.round(((150-th)/10)*V*16);
+      recs.push({p:'normal',icon:'🔼',color:'#10b981',
+        title:'Chlorure de calcium (TH+)',action:`↑ Dureté ${th} → 150 mg/L`,
+        dose:d>=1000?`${(d/1000).toFixed(1)} kg`:`${d} g`,
+        tip:'Eau trop douce attaque béton, liner et équipements. Diluer avant ajout.',
+        brand:'🛒 Mareva Calcite ou HTH Dureté+'});
+    } else if (th > 350) {
+      recs.push({p:'normal',icon:'🧴',color:'#10b981',
+        title:'Anticalcaire séquestrant',action:`TH élevé (${th} mg/L) — risque tartre`,
+        dose:`${Math.round(V*0.015*1000)} mL / semaine`,
+        tip:'Hauts-de-France : eau très calcaire. Traitement séquestrant hebdomadaire toute la saison.',
+        brand:'🛒 BAYROL Scaleprotect ou Mareva Anticalcaire (bidon 1L = toute la saison)'});
+    }
+  }
+
+  if (recs.length === 0) recs.push({p:'ok',icon:'✅',color:'#10b981',
+    title:'Eau parfaitement équilibrée 💎',action:'Tous les paramètres dans les zones idéales',dose:'—',
+    tip:`Prochain contrôle dans 3-4 jours. Maintien : ~${Math.round(V*0.010*1000)} g d'hypochlorite calcium/semaine.`,brand:''});
+  return recs;
+}
+
+// ── Render Gauge ─────────────────────────────────────────────────────────────
+function renderGauge(key) {
+  const p = PARAMS[key], v = state.vals[key];
+  const status = getStatus(key, v), color = S_COLOR[status];
+  const range = p.wH - p.wL;
+  const pct = (v !== '' && !isNaN(parseFloat(v)))
+    ? Math.min(100, Math.max(0, ((parseFloat(v)-p.wL)/range)*100)) : null;
+  const iL = ((p.min-p.wL)/range)*100;
+  const iH = ((p.max-p.wL)/range)*100;
+  return `
+    <div class="gauge">
+      ${pct!==null?`<div style="position:absolute;top:0;right:0;width:70px;height:70px;background:radial-gradient(circle,${color}22,transparent 70%);"></div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div>
+          <div class="gauge-label">${p.icon} ${p.label}</div>
+          <div class="gauge-val" style="color:${pct!==null?color:'#475569'}">${fmtVal(key,v)}<span class="gauge-unit">${p.unit}</span></div>
+        </div>
+        <div class="gauge-status" style="background:${color}20;color:${color};border:1px solid ${color}40;">${S_LABEL[status]}</div>
+      </div>
+      <div class="gauge-bar-wrap">
+        <div class="gauge-ideal" style="left:${iL}%;width:${iH-iL}%;"></div>
+        ${pct!==null?`<div class="gauge-dot" style="left:${pct}%;background:${color};box-shadow:0 0 8px ${color};"></div>`:''}
+      </div>
+      <div class="gauge-minmax">
+        <span>${p.wL}${p.unit}</span>
+        <span class="gauge-ideal-lbl">✓ ${p.min}–${p.max}</span>
+        <span>${p.wH}${p.unit}</span>
+      </div>
+    </div>`;
+}
+
+// ── Render Dashboard ─────────────────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('vol-display').textContent = state.settings.volume + 'm³';
+  document.getElementById('gauges-grid').innerHTML = KEYS.map(renderGauge).join('');
+
+  const recs = calcRecs(state.vals, state.settings.volume);
+  const hasUrgent = recs.some(r => r.p === 'urgent');
+  const allOk = recs.length === 1 && recs[0].p === 'ok';
+  const gs = hasUrgent ? 'bad' : allOk ? 'ok' : 'warn';
+  const badge = document.getElementById('global-badge');
+  badge.textContent = allOk ? '💎 Cristalline' : hasUrgent ? '🚨 Action requise' : '⚠️ À surveiller';
+  badge.style.background = S_COLOR[gs] + '20';
+  badge.style.color = S_COLOR[gs];
+  badge.style.border = `1px solid ${S_COLOR[gs]}40`;
+
+  const card = document.getElementById('recs-card');
+  card.style.borderColor = hasUrgent ? 'rgba(239,68,68,.35)' : allOk ? 'rgba(16,185,129,.35)' : 'rgba(245,158,11,.35)';
+
+  document.getElementById('recs-list').innerHTML = recs.map(r => `
+    <div class="rec" style="background:${r.color}10;border-color:${r.color}30;border-left-color:${r.color};">
+      <div class="rec-head">
+        <div class="rec-title" style="color:${r.color}">${r.icon} ${r.title}</div>
+        ${r.dose!=='—'?`<div class="rec-dose" style="background:${r.color}20;color:${r.color}">${r.dose}</div>`:''}
+      </div>
+      <div class="rec-action">${r.action}</div>
+      <div class="rec-tip">${r.tip}</div>
+      ${r.brand?`<div class="rec-brand">${r.brand}</div>`:''}
+    </div>`).join('');
+
+  document.getElementById('chlore-tip').style.display = state.settings.treatment === 'sel' ? 'none' : 'block';
+
+  const hist = state.history;
+  document.getElementById('last-date').textContent = hist.length > 0
+    ? 'Dernière mesure : ' + new Date(hist[0].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+}
+
+// ── Render Form ──────────────────────────────────────────────────────────────
+function renderForm() {
+  document.getElementById('form-grid').innerHTML = KEYS.map(key => {
+    const p = PARAMS[key], v = state.vals[key];
+    const status = getStatus(key, v), color = S_COLOR[status];
+    return `<div class="form-group">
+      <label>${p.icon} ${p.label}${p.unit?' ('+p.unit+')':''}</label>
+      <input type="number" step="0.1" inputmode="decimal" placeholder="${p.min}–${p.max}"
+        value="${v}" id="inp-${key}" oninput="onInput('${key}',this.value)"
+        style="border-color:${v!==''?color+'60':'rgba(255,255,255,.12)'}">
+      ${v!==''?`<div class="dot-ind" style="background:${color}"></div>`:''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('ideal-grid').innerHTML = KEYS.map(key => {
+    const p = PARAMS[key];
+    return `<div class="ideal-cell"><div class="n">${p.icon} ${p.label}</div><div class="v">${p.min}–${p.max} ${p.unit}</div></div>`;
+  }).join('');
+}
+
+function onInput(key, value) {
+  state.vals[key] = value;
+  // update dot and border color without re-rendering whole form
+  const inp = document.getElementById('inp-'+key);
+  if (!inp) return;
+  const status = getStatus(key, value), color = S_COLOR[status];
+  inp.style.borderColor = value !== '' ? color+'60' : 'rgba(255,255,255,.12)';
+  // update or create dot
+  let dot = inp.parentNode.querySelector('.dot-ind');
+  if (value !== '') {
+    if (!dot) { dot = document.createElement('div'); dot.className = 'dot-ind'; inp.parentNode.appendChild(dot); }
+    dot.style.background = color;
+  } else if (dot) dot.remove();
+}
+
+function clearForm() {
+  state.vals = {temp:'',ph:'',chlore:'',tac:'',stabilisant:'',th:''};
+  renderForm();
+  renderDashboard();
+}
+
+function saveMeasurement() {
+  const entry = {...state.vals, date: new Date().toISOString()};
+  state.history = [entry, ...state.history].slice(0, 60);
+  localStorage.setItem('aq_hist', JSON.stringify(state.history));
+  localStorage.setItem('aq_vals', JSON.stringify(state.vals));
+  const msg = document.getElementById('save-msg');
+  msg.textContent = '✅ Enregistrée !';
+  setTimeout(() => msg.textContent = '', 2500);
+  renderDashboard();
+}
+
+// ── Render History ────────────────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('hist-list');
+  if (state.history.length === 0) {
+    el.innerHTML = `<div class="card" style="text-align:center;padding:40px;">
+      <div style="font-size:40px;margin-bottom:10px;">📊</div>
+      <div style="color:#64748b;font-size:13px;">Aucune mesure enregistrée.<br>Utilise l'onglet Saisie.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = state.history.map((entry, i) => {
+    const statuses = KEYS.map(k => getStatus(k, entry[k]));
+    const worst = statuses.includes('bad') ? 'bad' : statuses.includes('warn') ? 'warn' : statuses.every(s=>s==='unknown') ? 'unknown' : 'ok';
+    const wc = S_COLOR[worst];
+    return `<div class="hist-entry" style="border-left-color:${wc};">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:600;font-size:13px;">
+          ${new Date(entry.date).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}
+          <span style="font-size:11px;color:#64748b;margin-left:6px;">${new Date(entry.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div style="padding:2px 9px;border-radius:999px;background:${wc}20;color:${wc};font-size:10px;font-weight:600;">${S_LABEL[worst]}</div>
+      </div>
+      <div class="hist-vals">
+        ${KEYS.map(k => {
+          const s = getStatus(k, entry[k]), c = S_COLOR[s];
+          return `<div><span style="color:#64748b;">${PARAMS[k].icon} </span><span style="color:${c};font-weight:600;">${entry[k]!==''&&entry[k]!==undefined?entry[k]+' '+PARAMS[k].unit:'—'}</span></div>`;
+        }).join('')}
+      </div>
+      ${i===0?`<button class="btn btn-sm" style="margin-top:10px;background:rgba(14,165,233,.12);color:#0ea5e9;border:1px solid rgba(14,165,233,.25);" onclick="restoreEntry(0)">🔄 Restaurer comme mesure actuelle</button>`:''}
+    </div>`;
+  }).join('') + `<button class="btn-danger" onclick="clearHistory()" style="width:100%;margin-top:4px;">🗑️ Effacer l'historique</button>`;
+}
+
+function restoreEntry(i) {
+  const {date, ...v} = state.history[i];
+  state.vals = {...state.vals, ...v};
+  switchTabById('dashboard');
+  renderDashboard();
+}
+
+function clearHistory() {
+  if (!confirm('Supprimer tout l\'historique ?')) return;
+  state.history = [];
+  localStorage.removeItem('aq_hist');
+  renderHistory();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+const TAB_IDS = ['dashboard','saisie','ia','historique'];
+function switchTab(id, btn) {
+  TAB_IDS.forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== id);
+  });
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'saisie') renderForm();
+  if (id === 'historique') renderHistory();
+  if (id === 'ia') renderAI();
+}
+function switchTabById(id) {
+  const btns = document.querySelectorAll('.tab');
+  const idx = TAB_IDS.indexOf(id);
+  switchTab(id, btns[idx]);
+}
+
+function toggleSettings() {
+  document.getElementById('settings-panel').classList.toggle('open');
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+function setAiMode(m) {
+  state.aiMode = m;
+  const isImg = m === 'image';
+  document.getElementById('ai-text-zone').classList.toggle('hidden', isImg);
+  document.getElementById('ai-img-zone').classList.toggle('hidden', !isImg);
+  const tb = document.getElementById('mode-text-btn');
+  const ib = document.getElementById('mode-img-btn');
+  if (isImg) {
+    ib.style.cssText='background:rgba(14,165,233,.15);color:#0ea5e9;border:1px solid rgba(14,165,233,.4);';
+    tb.style.cssText='background:rgba(255,255,255,.04);color:#64748b;border:1px solid rgba(255,255,255,.08);';
+  } else {
+    tb.style.cssText='background:rgba(14,165,233,.15);color:#0ea5e9;border:1px solid rgba(14,165,233,.4);';
+    ib.style.cssText='background:rgba(255,255,255,.04);color:#64748b;border:1px solid rgba(255,255,255,.08);';
+  }
+}
+
+function renderAI() {
+  const noKey = document.getElementById('no-key-warn');
+  noKey.classList.toggle('hidden', !!state.settings.apiKey);
+}
+
+function handleImg(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.aiB64 = ev.target.result.split(',')[1];
+    const img = document.getElementById('preview-img');
+    img.src = ev.target.result;
+    img.style.display = 'block';
+    document.getElementById('drop-placeholder').style.display = 'none';
+  };
+  reader.readAsDataURL(f);
+}
+
+async function runAI() {
+  const key = state.settings.apiKey;
+  if (!key) { alert('Clé API manquante dans les paramètres ⚙️'); return; }
+  const btn = document.getElementById('ai-btn');
+  btn.textContent = '⏳ Analyse…'; btn.disabled = true;
+  document.getElementById('ai-result-box').innerHTML = '';
+  try {
+    const sys = `Tu es un expert pisciniste. Retourne UNIQUEMENT un JSON valide:
+{"temp":null,"ph":null,"chlore":null,"tac":null,"stabilisant":null,"th":null,"notes":"explication courte en français"}
+Valeurs numériques ou null. temp en °C, ph sans unité (ex:7.2), chlore/tac/stabilisant/th en mg/L. Zéro markdown.`;
+    let content;
+    if (state.aiMode === 'image' && state.aiB64) {
+      content = [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:state.aiB64}},{type:'text',text:'Analyse cette photo de bandelette de test piscine.'}];
+    } else {
+      const txt = document.getElementById('ai-text').value;
+      content = [{type:'text',text:`Piscine ${state.settings.volume}m³. Données : ${txt}`}];
+    }
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:500,system:sys,messages:[{role:'user',content}]})
+    });
+    const data = await resp.json();
+    const txt2 = (data.content||[]).map(b=>b.text||'').join('').trim().replace(/```json|```/g,'').trim();
+    const r = JSON.parse(txt2);
+    let html = `<div class="ai-result">
+      <div style="font-size:12px;font-weight:700;color:#10b981;margin-bottom:12px;">✅ Valeurs détectées</div>
+      <div class="ai-vals">
+        ${KEYS.map(k=>{const v=r[k],p=PARAMS[k];return `<div class="ai-val-cell"><div class="ak">${p.icon} ${p.label}</div><div class="av" style="color:${v!==null?'#e2e8f0':'#475569'}">${v!==null?v:'—'}<span style="font-size:10px;color:#64748b">${v!==null?' '+p.unit:''}</span></div></div>`;}).join('')}
+      </div>
+      ${r.notes?`<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-bottom:12px;">💬 ${r.notes}</div>`:''}
+      <button class="btn" onclick="applyAI()">📊 Appliquer au dashboard →</button>
+    </div>`;
+    document.getElementById('ai-result-box').innerHTML = html;
+    window._aiParsed = r;
+  } catch(e) {
+    document.getElementById('ai-result-box').innerHTML = `<div class="err-box">❌ Analyse impossible. Vérifie ta clé API et réessaie.<br><small>${e.message}</small></div>`;
+  }
+  btn.textContent = '🔍 Analyser'; btn.disabled = false;
+}
+
+function applyAI() {
+  const r = window._aiParsed;
+  if (!r) return;
+  KEYS.forEach(k => { if (r[k] !== null && r[k] !== undefined) state.vals[k] = String(r[k]); });
+  localStorage.setItem('aq_vals', JSON.stringify(state.vals));
+  switchTabById('dashboard');
+}
+
+// ── Icon generation ───────────────────────────────────────────────────────────
+(function(){
+  try {
+    const c=document.createElement('canvas'); c.width=c.height=512;
+    const x=c.getContext('2d');
+    x.fillStyle='#0A1628';
+    x.beginPath(); x.roundRect(0,0,512,512,80); x.fill();
+    x.fillStyle='#0ea5e9'; x.globalAlpha=.5;
+    x.beginPath(); x.moveTo(0,310); x.bezierCurveTo(128,260,256,360,512,300); x.lineTo(512,512); x.lineTo(0,512); x.closePath(); x.fill();
+    x.fillStyle='#06b6d4'; x.globalAlpha=.85;
+    x.beginPath(); x.moveTo(0,360); x.bezierCurveTo(128,310,384,420,512,360); x.lineTo(512,512); x.lineTo(0,512); x.closePath(); x.fill();
+    x.globalAlpha=1;
+    x.strokeStyle='#00e5cc'; x.lineWidth=18;
+    x.beginPath(); x.arc(256,195,75,0,Math.PI*2); x.stroke();
+    x.strokeStyle='#00e5cc'; x.lineWidth=14; x.lineCap='round';
+    x.beginPath(); x.moveTo(256,135); x.lineTo(256,210); x.stroke();
+    x.fillStyle='#00e5cc';
+    x.beginPath(); x.arc(256,210,20,0,Math.PI*2); x.fill();
+    document.getElementById('ati').href = c.toDataURL('image/png');
+  } catch(e){}
+})();
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadState();
+renderDashboard();
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
