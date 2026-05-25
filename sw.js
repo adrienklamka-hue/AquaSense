@@ -1,4 +1,4 @@
-const CACHE = 'aquasense-v1';
+const CACHE = 'aquasense-v2';
 const ASSETS = [
   './',
   './index.html',

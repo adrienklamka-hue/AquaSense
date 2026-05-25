@@ -808,122 +808,113 @@ async function runAI() {
   var btn = document.getElementById('ai-btn');
   var resultBox = document.getElementById('ai-result-box');
   var key = state.settings.apiKey;
-  var inputText = document.getElementById('ai-text').value.trim();
+  var inputText = (document.getElementById('ai-text').value || '').trim();
 
   btn.disabled = true;
   btn.textContent = '⏳ Analyse en cours…';
-  resultBox.innerHTML = '';
+  resultBox.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:12px;">⏳ Connexion à l'API…</div>';
 
   try {
     var r;
 
-    // ── Mode sans clé API : parser local ────────────────────────────────────
+    // ── MODE LOCAL (sans clé API) ─────────────────────────────────────────────
     if (!key) {
       if (state.aiMode === 'image') {
-        resultBox.innerHTML = '<div class="warn-box">📷 L'analyse de photo nécessite une clé API Anthropic.<br>Configure-la dans ⚙️ Paramètres, ou utilise le mode texte pour décrire les couleurs de ta bandelette.</div>';
-        btn.disabled = false;
-        btn.textContent = '🔍 Analyser (mode local)';
-        return;
+        resultBox.innerHTML = '<div class="warn-box">📷 La photo nécessite une clé API.<br>Passe en mode texte ou configure ta clé dans ⚙️</div>';
+        btn.disabled = false; btn.textContent = '🔍 Analyser (mode local)'; return;
       }
       if (!inputText) {
-        resultBox.innerHTML = '<div class="warn-box">✏️ Saisis une description avant de lancer l'analyse.</div>';
-        btn.disabled = false;
-        btn.textContent = '🔍 Analyser (mode local)';
-        return;
+        resultBox.innerHTML = '<div class="warn-box">✏️ Saisis une description avant d'analyser.</div>';
+        btn.disabled = false; btn.textContent = '🔍 Analyser (mode local)'; return;
       }
       r = parseLocal(inputText);
 
-    // ── Mode avec clé API : appel Anthropic ──────────────────────────────────
+    // ── MODE API ──────────────────────────────────────────────────────────────
     } else {
-      var sys = 'Tu es un expert pisciniste. Retourne UNIQUEMENT un JSON valide, sans markdown ni texte avant ou apres:
-{"temp":null,"ph":null,"chlore":null,"tac":null,"stabilisant":null,"th":null,"notes":"explication courte en francais"}
-Valeurs numeriques ou null. temp en C, ph sans unite, chlore/tac/stabilisant/th en mg/L.';
+      resultBox.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:12px;">🌐 Appel API en cours…</div>';
 
-      var msgContent;
+      var bodyContent;
       if (state.aiMode === 'image' && state.aiB64) {
-        msgContent = [
+        bodyContent = [
           { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: state.aiB64 } },
-          { type: 'text', text: 'Analyse cette photo de bandelette de test piscine et extrait les valeurs.' }
+          { type: 'text', text: 'Piscine ' + state.settings.volume + 'm3. Analyse la bandelette et reponds avec ce JSON exact (valeurs numeriques ou null, zero texte autour): {"temp":null,"ph":null,"chlore":null,"tac":null,"stabilisant":null,"th":null,"notes":""}' }
         ];
       } else {
         if (!inputText) {
-          resultBox.innerHTML = '<div class="warn-box">✏️ Saisis une description avant de lancer l'analyse.</div>';
-          btn.disabled = false;
-          btn.textContent = '🤖 Analyser avec IA';
-          return;
+          resultBox.innerHTML = '<div class="warn-box">✏️ Saisis une description.</div>';
+          btn.disabled = false; btn.textContent = '🤖 Analyser avec IA'; return;
         }
-        msgContent = [{ type: 'text', text: 'Piscine ' + state.settings.volume + 'm³. Données : ' + inputText }];
+        bodyContent = 'Piscine ' + state.settings.volume + 'm3. Donnees : ' + inputText + '\n\nReponds avec ce JSON exact (valeurs numeriques ou null, zero texte autour): {"temp":null,"ph":null,"chlore":null,"tac":null,"stabilisant":null,"th":null,"notes":""}';
       }
 
-      var resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
-          messages: [{
-            role: 'user',
-            content: (function() {
-              var prompt = 'Reponds uniquement avec un JSON valide (pas de markdown, pas de texte autour), exemple: {"temp":null,"ph":7.2,"chlore":1.5,"tac":90,"stabilisant":35,"th":200,"notes":"ok"}\n\nDonnees piscine ' + state.settings.volume + 'm3 : ';
-              if (state.aiMode === 'image' && state.aiB64) {
-                return [
-                  { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: state.aiB64 } },
-                  { type: 'text', text: prompt + 'Photo de bandelette ci-dessus. Extrait les valeurs en mg/L.' }
-                ];
-              }
-              return prompt + inputText;
-            })()
-          }]
-        })
-      });
-
-      // Read as text first to debug if needed
-      var rawResp = await resp.text();
-
-      // Parse HTTP response
-      var data;
-      try { data = JSON.parse(rawResp); } catch(e) {
-        throw new Error('Réponse API illisible: ' + rawResp.slice(0, 100));
+      var fetchResp;
+      try {
+        fetchResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 256,
+            messages: [{ role: 'user', content: bodyContent }]
+          })
+        });
+      } catch(fetchErr) {
+        throw new Error('Réseau bloqué : ' + fetchErr.message + '. Vérifie que CORS est autorisé.');
       }
 
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-      if (!data.content || !data.content.length) throw new Error('Réponse vide du modèle');
+      var rawText = await fetchResp.text();
 
-      // Extract text from content blocks
-      var rawText = data.content
+      // Parse the HTTP envelope
+      var apiData;
+      try { apiData = JSON.parse(rawText); }
+      catch(e) { throw new Error('Réponse HTTP non-JSON (HTTP ' + fetchResp.status + ') : ' + rawText.slice(0,120)); }
+
+      // Check API-level error
+      if (apiData.error) throw new Error('API: ' + (apiData.error.message || JSON.stringify(apiData.error)));
+      if (!apiData.content || !apiData.content.length) throw new Error('Réponse API vide. Statut HTTP: ' + fetchResp.status);
+
+      // Extract text from the response
+      var modelText = apiData.content
         .filter(function(b) { return b.type === 'text'; })
-        .map(function(b) { return b.text || ''; })
+        .map(function(b) { return b.text; })
         .join('').trim();
 
-      // Strip markdown fences if present
-      rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+      // Strip any markdown fences
+      modelText = modelText.replace(/^```[\w]*\s*/m, '').replace(/\s*```$/m, '').trim();
 
-      // Extract JSON object from text (in case there's surrounding text)
-      var jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Pas de JSON dans la réponse: ' + rawText.slice(0, 100));
+      // Extract JSON object
+      var jsonMatch = modelText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Le modèle n'a pas renvoyé de JSON. Réponse : "' + modelText.slice(0,120) + '"');
 
-      r = JSON.parse(jsonMatch[0]);
+      try { r = JSON.parse(jsonMatch[0]); }
+      catch(e) { throw new Error('JSON invalide : ' + jsonMatch[0].slice(0,120)); }
 
-      // Ensure all keys exist
+      // Normalize keys
       ['temp','ph','chlore','tac','stabilisant','th','notes'].forEach(function(k) {
         if (!(k in r)) r[k] = null;
+        if (r[k] !== null && k !== 'notes') r[k] = parseFloat(r[k]) || null;
       });
     }
 
-    // ── Afficher les résultats ───────────────────────────────────────────────
+    // ── AFFICHAGE RÉSULTATS ────────────────────────────────────────────────────
     window._aiParsed = r;
+    var hasValues = KEYS.some(function(k) { return r[k] !== null && r[k] !== undefined; });
+
+    if (!hasValues && !key) {
+      resultBox.innerHTML = '<div class="warn-box">🔍 Aucune valeur reconnue.<br><strong>Format attendu :</strong> pH 7.2, chlore 1.5, TAC 90, stabilisant 35, TH 250</div>';
+      btn.disabled = false; btn.textContent = key ? '🤖 Analyser avec IA' : '🔍 Analyser (mode local)'; return;
+    }
+
     var valsHtml = KEYS.map(function(k) {
       var v = r[k], p = PARAMS[k];
-      var status = v !== null ? getStatus(k, v) : 'unknown';
-      var color = S_COLOR[status];
-      return '<div class="ai-val-cell">'
-        + '<div class="ak">' + p.icon + ' ' + p.label + '</div>'
-        + '<div class="av" style="color:' + (v !== null ? color : '#475569') + '">'
+      var color = v !== null ? S_COLOR[getStatus(k, v)] : '#475569';
+      return '<div class="ai-val-cell"><div class="ak">' + p.icon + ' ' + p.label + '</div>'
+        + '<div class="av" style="color:' + color + '">'
         + (v !== null ? v : '—')
         + '<span style="font-size:10px;color:#64748b">' + (v !== null ? ' ' + p.unit : '') + '</span>'
         + '</div></div>';
@@ -931,20 +922,22 @@ Valeurs numeriques ou null. temp en C, ph sans unite, chlore/tac/stabilisant/th 
 
     resultBox.innerHTML = '<div class="ai-result">'
       + '<div style="font-size:12px;font-weight:700;color:#10b981;margin-bottom:12px;">'
-      + (key ? '🤖 Analyse IA' : '🔍 Analyse locale') + ' — Valeurs détectées</div>'
+      + (key ? '🤖 Analyse IA' : '🔍 Analyse locale') + ' — Valeurs extraites</div>'
       + '<div class="ai-vals">' + valsHtml + '</div>'
       + (r.notes ? '<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-bottom:12px;">💬 ' + r.notes + '</div>' : '')
       + '<button class="btn" onclick="applyAI()">📊 Appliquer au dashboard →</button>'
       + '</div>';
 
   } catch(err) {
-    resultBox.innerHTML = '<div class="err-box">❌ Erreur : ' + (err.message || 'Analyse impossible') + '<br>'
-      + '<small style="opacity:.7">Vérifie ta clé API dans ⚙️ ou passe en mode texte sans clé.</small></div>';
+    resultBox.innerHTML = '<div class="err-box" style="word-break:break-word;">'
+      + '<strong>❌ ' + (err.message || 'Erreur inconnue') + '</strong>'
+      + '</div>';
   }
 
   btn.disabled = false;
   btn.textContent = key ? '🤖 Analyser avec IA' : '🔍 Analyser (mode local)';
 }
+
 
 function applyAI() {
   var r = window._aiParsed;
