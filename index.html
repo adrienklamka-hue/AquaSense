@@ -125,7 +125,7 @@ textarea{resize:vertical;min-height:100px;}
   <!-- Header -->
   <div class="hdr">
     <div>
-      <div class="lbl">AquaSense Pro</div>
+      <div class="lbl">AquaSense Pro <span style="color:#475569;font-size:9px;margin-left:6px;">v3</span></div>
       <h1>Ma Piscine <span id="vol-display">75m³</span></h1>
     </div>
     <div class="hdr-r">
@@ -158,6 +158,7 @@ textarea{resize:vertical;min-height:100px;}
       </div>
     </div>
     <div class="tip-box" style="margin-top:12px;">💡 Hauts-de-France : eau calcaire. Anticalcaire hebdomadaire recommandé.</div>
+    <button onclick="forceUpdate()" style="margin-top:10px;width:100%;padding:10px;background:rgba(14,165,233,.1);color:#0ea5e9;border:1px solid rgba(14,165,233,.3);border-radius:10px;font-size:12px;cursor:pointer;">🔄 Forcer la mise à jour de l'app</button>
   </div>
 
   <!-- Tabs -->
@@ -963,6 +964,18 @@ function applyAI() {
     document.getElementById('ati').href=c.toDataURL('image/png');
   }catch(e){}
 })();
+
+// ── Force update ─────────────────────────────────────────────────────────────
+function forceUpdate() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(r) { r.unregister(); });
+      window.location.reload(true);
+    });
+  } else {
+    window.location.reload(true);
+  }
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 loadState();
